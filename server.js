@@ -4,6 +4,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+const weatherRoutes = require('./routes/weather');
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -43,6 +44,8 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/reminders', require('./routes/reminder'));
+
+app.use('/api/weather', weatherRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
