@@ -55,7 +55,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/reminders', require('./routes/reminder'));
-app.use('/api/calendar', require('./routes/calendar'));
+app.use('/api', require('./routes/calendar'));
 app.use('/api/weather', weatherRoutes);
 
 // Basic route
@@ -99,7 +99,7 @@ app.use('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📋 Reminder API: http://localhost:${PORT}/api/reminders`);
+  console.log(`📋 Reminder API: http://localhost:${PORT}/api/reminder`);
   console.log(`📅 Calendar API: http://localhost:${PORT}/api/calendar`);
   console.log(`🌤️ Weather API: http://localhost:${PORT}/api/weather`);
   console.log(`🔍 Health Check: http://localhost:${PORT}/api/calendar/health`);
