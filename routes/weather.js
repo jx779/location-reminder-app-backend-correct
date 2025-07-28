@@ -96,7 +96,9 @@ router.post('/reminders-batch', async (req, res) => {
         const processedReminders = await Promise.all(
             reminders.map(async (reminder) => {
                 if (reminder.isOutdoor && reminder.location) {
+                    console.log(`🔄 Fetching weather for reminder: ${reminder.title} at ${JSON.stringify(reminder.location)}`);
                     const weatherCheck = await weatherService.checkEventWeather(reminder);
+                    console.log(`✅ Weather fetched for reminder: ${reminder.title}`, weatherCheck);
                     return {
                         ...reminder,
                         weather: weatherCheck.weather || null,

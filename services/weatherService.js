@@ -124,12 +124,11 @@ class WeatherService {
     // Get weather for specific area
     async getWeatherForArea(searchArea) {
         try {
-            // Refresh cache if needed
-            if (this.isCacheStale()) {
-                await this.updateWeatherCache();
-            }
-            
-            const normalizedSearch = searchArea.toLowerCase().trim();
+            let areaName = typeof searchArea === 'string' 
+                ? searchArea 
+                : searchArea?.name || '';
+
+            const normalizedSearch = areaName.toLowerCase().trim();
             
             // Try exact match first
             let weather = this.cache.get(normalizedSearch);

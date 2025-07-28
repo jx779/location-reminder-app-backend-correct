@@ -5,19 +5,42 @@ require('dotenv').config();
 
 const app = express();
 const weatherRoutes = require('./routes/weather');
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5002; // Changed to 5002 to match your frontend
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Enhanced CORS configuration
+app.use(cors({
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:8081', 
+    'exp://192.168.219.161:8081',
+    'http://192.168.219.161:8081'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Enhanced middleware
+app.use(express.json({ limit: '10mb' })); // Increased limit for AI reminders
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  if (req.body && Object.keys(req.body).length > 0 && req.path !== '/api/weather/reminders-batch') {
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
 
 // MongoDB Connection
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI); // Removed deprecated options
-    console.log('MongoDB connected successfully');
+    const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/reminders_app';
+    await mongoose.connect(MONGO_URI);
+    console.log('✅ MongoDB connected successfully');
+    console.log(`📍 Database: ${mongoose.connection.name}`);
   } catch (error) {
-    console.error('MongoDB connection failed:', error.message);
+    console.error('❌ MongoDB connection failed:', error.message);
     process.exit(1);
   }
 };
@@ -47,25 +70,45 @@ try {
   console.error('📁 Make sure ./routes/calendar.js exists');
 }
 
-// Add request logging
-app.use((req, res, next) => {
-  console.log(`🔍 ${req.method} ${req.path}`);
-  next();
-});
-
 // Routes
 app.use('/api/reminders', require('./routes/reminder'));
 app.use('/api/calendar', require('./routes/calendar'));
 app.use('/api/weather', weatherRoutes);
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+    uptime: process.uptime(),
+    features: ['AI Reminders', 'Weather Integration', 'Location Tracking']
+  });
+});
+
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Backend API is running!' });
+  res.json({ 
+    message: 'Reminders API Server v2.0 with AI Support',
+    features: ['AI Reminders', 'Weather Integration', 'Location Tracking'],
+    endpoints: {
+      reminders: '/api/reminders',
+      aiSync: '/api/reminders/sync-ai',
+      aiStats: '/api/reminders/stats/ai',
+      calendar: '/api/calendar',
+      weather: '/api/weather',
+      health: '/api/health'
+    }
+  });
 });
 
 // Test route to verify Express is working
 app.get('/api/test', (req, res) => {
-  res.json({ message: 'API test route working', timestamp: new Date() });
+  res.json({ 
+    message: 'API test route working', 
+    timestamp: new Date(),
+    server: 'Enhanced with AI support'
+  });
 });
 
 // Calendar API health check
@@ -85,24 +128,66 @@ app.get('/api/calendar/health', (req, res) => {
   });
 });
 
-// Error handling middleware
+// Reminders API health check
+app.get('/api/reminders/health', (req, res) => {
+  res.json({ 
+    message: 'Reminders API is working with AI support!', 
+    timestamp: new Date(),
+    endpoints: [
+      'GET /api/reminders',
+      'POST /api/reminders',
+      'GET /api/reminders/:id',
+      'PATCH /api/reminders/:id',
+      'DELETE /api/reminders/:id',
+      'POST /api/reminders/sync-ai',
+      'GET /api/reminders/stats/ai'
+    ]
+  });
+});
+
+// Enhanced error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+  console.error('❌ Unhandled error:', err);
+  res.status(500).json({ 
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+  });
 });
 
 // Handle 404
 app.use('*', (req, res) => {
   console.log(`❌ 404 - Route not found: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({ message: 'Route not found' });
+  res.status(404).json({ 
+    message: 'Route not found',
+    path: req.originalUrl,
+    method: req.method,
+    availableEndpoints: [
+      '/api/reminders',
+      '/api/calendar', 
+      '/api/weather',
+      '/api/health'
+    ]
+  });
 });
 
-app.listen(PORT, () => {
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  mongoose.connection.close(() => {
+    console.log('MongoDB connection closed');
+    process.exit(0);
+  });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📋 Reminder API: http://localhost:${PORT}/api/reminders`);
-  console.log(`📅 Calendar API: http://localhost:${PORT}/api/calendar`);
-  console.log(`🌤️ Weather API: http://localhost:${PORT}/api/weather`);
-  console.log(`🔍 Health Check: http://localhost:${PORT}/api/calendar/health`);
+  console.log(`📱 API Base URL: http://192.168.219.161:${PORT}/api`);
+  console.log(`📋 Reminder API: http://192.168.219.161:${PORT}/api/reminders`);
+  console.log(`🤖 AI Sync API: http://192.168.219.161:${PORT}/api/reminders/sync-ai`);
+  console.log(`📅 Calendar API: http://192.168.219.161:${PORT}/api/calendar`);
+  console.log(`🌤️ Weather API: http://192.168.219.161:${PORT}/api/weather`);
+  console.log(`🔍 Health Check: http://192.168.219.161:${PORT}/api/health`);
+  console.log(`💡 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 module.exports = app;
