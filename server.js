@@ -72,7 +72,7 @@ try {
 
 // Routes
 app.use('/api/reminders', require('./routes/reminder'));
-app.use('/api/calendar', require('./routes/calendar'));
+app.use('/api', require('./routes/calendar'));
 app.use('/api/weather', weatherRoutes);
 
 // Health check endpoint
